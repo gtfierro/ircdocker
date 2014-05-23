@@ -1,4 +1,5 @@
 import re
+import random
 from twisted.words.protocols import irc
 from twisted.internet import protocol, reactor
 from datetime import datetime
@@ -6,6 +7,16 @@ from collections import defaultdict
 
 last_seen = {}
 tell_messages = defaultdict(list)
+
+bttf = filter(lambda x: len(x.strip()), open('backtothefuture_transcript.txt').read().split('\n\n'))
+
+def ping():
+    num_lines = random.randint(1,8)
+    while True:
+        start_line = random.randint(1,len(bttf))
+        if re.match('^[A-Za-z]+: ',bttf[start_line]):
+            break
+    return '\n'.join(bttf[start_line:start_line+num_lines])
 
 def say_hi_back(helloword, msg, username):
     return helloword + ' ' + username + '!'
@@ -43,6 +54,7 @@ responses['(last )?seen'] = get_last_seen
 responses['tell'] = tell_user
 responses['help'] = print_help
 
+
 def find_match(text):
     for resp in responses:
         match = re.compile(resp, re.I).match(text)
@@ -65,7 +77,6 @@ class RipleyBot(irc.IRCClient):
         print "Joined {0}".format(channel)
 
     def privmsg(self, user, channel, msg):
-        print user, channel, msg, self.nickname
         if not user:
             return
         user = user.split('!',1)[0]
@@ -77,6 +88,9 @@ class RipleyBot(irc.IRCClient):
             for message in tell_messages[user]:
                 self.msg(self.factory.channel, message)
             del tell_messages[user]
+
+        if 'ping' == msg:
+            self.msg(self.factory.channel, ping())
 
         if self.nickname in msg:
             msg = re.compile(self.nickname + '[:,]* ?', re.I).sub('',msg)
